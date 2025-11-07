@@ -46,6 +46,7 @@ export default function Home() {
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [paymentStep, setPaymentStep] = useState<'scan' | 'confirm' | 'success'>('scan');
   const [successTxHash, setSuccessTxHash] = useState<string | null>(null);
+  const [selectedContract, setSelectedContract] = useState<'official' | 'community'>('official'); // 修正：グローバルなコントラクト選択状態
 
   const handleScanResult = (data: string) => {
     setScannedData(data);
@@ -141,7 +142,10 @@ export default function Home() {
 
             {/* JPYC残高表示 */}
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <JPYCBalance />
+              <JPYCBalance 
+                selectedContract={selectedContract}
+                onContractChange={setSelectedContract}
+              />
             </div>
           </motion.div>
         )}
@@ -197,6 +201,7 @@ export default function Home() {
                   {paymentStep === 'confirm' && scannedData && (
                     <PaymentScreen
                       scannedData={scannedData}
+                      selectedContract={selectedContract}
                       onBack={resetScan}
                       onSuccess={handlePaymentSuccess}
                     />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useReadContract } from 'wagmi';
-import { JPYC_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
+import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { Search, AlertCircle, CheckCircle } from 'lucide-react';
 import { isAddress, getAddress } from 'viem';
 
@@ -10,11 +10,12 @@ export function JPYCBalanceChecker() {
   const [inputAddress, setInputAddress] = useState('');
   const [checkAddress, setCheckAddress] = useState<string | null>(null);
 
+  // 公式JPYC残高
   const {
-    data: balance,
-    isError: balanceError,
-    isLoading: balanceLoading,
-    error: errorDetail,
+    data: officialBalance,
+    isError: officialBalanceError,
+    isLoading: officialBalanceLoading,
+    error: officialErrorDetail,
   } = useReadContract({
     address: JPYC_CONFIG.address,
     abi: JPYC_CONFIG.abi,
@@ -26,10 +27,34 @@ export function JPYCBalanceChecker() {
   });
 
   const {
-    data: decimals,
+    data: officialDecimals,
   } = useReadContract({
     address: JPYC_CONFIG.address,
     abi: JPYC_CONFIG.abi,
+    functionName: 'decimals',
+  });
+
+  // コミュニティJPYC残高
+  const {
+    data: communityBalance,
+    isError: communityBalanceError,
+    isLoading: communityBalanceLoading,
+    error: communityErrorDetail,
+  } = useReadContract({
+    address: JPYC_COMMUNITY_CONFIG.address,
+    abi: JPYC_COMMUNITY_CONFIG.abi,
+    functionName: 'balanceOf',
+    args: checkAddress ? [checkAddress as `0x${string}`] : undefined,
+    query: {
+      enabled: !!checkAddress && isAddress(checkAddress),
+    },
+  });
+
+  const {
+    data: communityDecimals,
+  } = useReadContract({
+    address: JPYC_COMMUNITY_CONFIG.address,
+    abi: JPYC_COMMUNITY_CONFIG.abi,
     functionName: 'decimals',
   });
 
@@ -45,12 +70,22 @@ export function JPYCBalanceChecker() {
     setCheckAddress(null);
   };
 
-  const balanceValue = balance as bigint | undefined;
-  const decimalsValue = decimals as number | undefined;
+  // 残高データの計算
+  const officialBalanceValue = officialBalance as bigint | undefined;
+  const officialDecimalsValue = officialDecimals as number | undefined;
+  const communityBalanceValue = communityBalance as bigint | undefined;
+  const communityDecimalsValue = communityDecimals as number | undefined;
 
-  const formattedBalance = balanceValue && decimalsValue
-    ? formatJPYCDisplay(balanceValue, decimalsValue)
+  const formattedOfficialBalance = officialBalanceValue && officialDecimalsValue
+    ? formatJPYCDisplay(officialBalanceValue, officialDecimalsValue)
     : '0';
+
+  const formattedCommunityBalance = communityBalanceValue && communityDecimalsValue
+    ? formatJPYCDisplay(communityBalanceValue, communityDecimalsValue)
+    : '0';
+
+  const isLoading = officialBalanceLoading || communityBalanceLoading;
+  const hasError = officialBalanceError || communityBalanceError;
 
   return (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
@@ -71,10 +106,10 @@ export function JPYCBalanceChecker() {
         <div className="flex gap-2">
           <button
             onClick={handleCheck}
-            disabled={!inputAddress || !isAddress(inputAddress) || balanceLoading}
+            disabled={!inputAddress || !isAddress(inputAddress) || isLoading}
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            {balanceLoading ? '確認中...' : '残高確認'}
+            {isLoading ? '確認中...' : '残高確認'}
           </button>
           {checkAddress && (
             <button
@@ -97,7 +132,7 @@ export function JPYCBalanceChecker() {
 
       {/* Result Display */}
       {checkAddress && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div className="text-sm text-gray-600">
             <strong>確認アドレス:</strong>
           </div>
@@ -105,29 +140,76 @@ export function JPYCBalanceChecker() {
             {checkAddress}
           </div>
 
-          {balanceError ? (
-            <div className="bg-red-50 border border-red-200 rounded p-3">
-              <div className="flex items-center gap-2 text-red-700">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">エラーが発生しました</span>
-              </div>
-              {errorDetail && (
-                <p className="text-xs text-red-600 mt-1 font-mono">
-                  {errorDetail.message}
-                </p>
-              )}
+          {/* 公式JPYC残高 */}
+          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+            <div className="flex items-center gap-2 text-blue-700 mb-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">🏛️ 公式 JPYC 残高</span>
             </div>
-          ) : (
-            <div className="bg-green-50 border border-green-200 rounded p-3">
-              <div className="flex items-center gap-2 text-green-700 mb-2">
-                <CheckCircle className="h-4 w-4" />
-                <span className="text-sm font-medium">JPYC残高</span>
+            {officialBalanceError ? (
+              <div className="text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                取得エラー
+                {officialErrorDetail && (
+                  <p className="text-xs mt-1 font-mono">{officialErrorDetail.message}</p>
+                )}
               </div>
-              <p className="text-xl font-bold text-green-900">
-                {formattedBalance} JPYC
+            ) : (
+              <>
+                <p className="text-xl font-bold text-blue-900">
+                  {formattedOfficialBalance} JPYC
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  生データ: {officialBalanceValue?.toString() || '0'}
+                </p>
+                <p className="text-xs text-blue-500 mt-1">
+                  コントラクト: {JPYC_CONFIG.address.slice(0, 6)}...{JPYC_CONFIG.address.slice(-4)}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* コミュニティJPYC残高 */}
+          <div className="bg-green-50 border border-green-200 rounded p-3">
+            <div className="flex items-center gap-2 text-green-700 mb-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">🌍 コミュニティ JPYC 残高</span>
+            </div>
+            {communityBalanceError ? (
+              <div className="text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                取得エラー
+                {communityErrorDetail && (
+                  <p className="text-xs mt-1 font-mono">{communityErrorDetail.message}</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="text-xl font-bold text-green-900">
+                  {formattedCommunityBalance} JPYC
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  生データ: {communityBalanceValue?.toString() || '0'}
+                </p>
+                <p className="text-xs text-green-500 mt-1">
+                  コントラクト: {JPYC_COMMUNITY_CONFIG.address.slice(0, 6)}...{JPYC_COMMUNITY_CONFIG.address.slice(-4)}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* 合計表示 */}
+          {!hasError && (
+            <div className="bg-purple-50 border border-purple-200 rounded p-3">
+              <div className="flex items-center gap-2 text-purple-700 mb-2">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm font-medium">📊 合計残高</span>
+              </div>
+              <p className="text-xl font-bold text-purple-900">
+                {(Number(formattedOfficialBalance.replace(/,/g, '')) + Number(formattedCommunityBalance.replace(/,/g, ''))).toLocaleString('ja-JP')} JPYC
               </p>
-              <p className="text-xs text-green-600 mt-1">
-                生データ: {balanceValue?.toString() || '0'}
+              <p className="text-xs text-purple-600 mt-1">
+                公式: {formattedOfficialBalance} + コミュニティ: {formattedCommunityBalance}
               </p>
             </div>
           )}
@@ -148,11 +230,12 @@ export function JPYCBalanceChecker() {
         
         {/* 詳細デバッグ情報 */}
         <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-xs font-medium text-blue-800 mb-1">🔍 トラブルシューティング:</p>
+          <p className="text-xs font-medium text-blue-800 mb-1">🔍 複数コントラクト対応:</p>
           <div className="space-y-1 text-xs text-blue-700">
-            <p>• アドレスのチェックサム（大文字小文字）を自動修正</p>
-            <p>• 現在使用中のコントラクト: 0x3eF95...522253</p>
-            <p>• Faucetページで表示されたアドレスを使用中</p>
+            <p>• 🏛️ 公式JPYC: {JPYC_CONFIG.address.slice(0, 8)}...{JPYC_CONFIG.address.slice(-6)}</p>
+            <p>• 🌍 コミュニティJPYC: {JPYC_COMMUNITY_CONFIG.address.slice(0, 8)}...{JPYC_COMMUNITY_CONFIG.address.slice(-6)}</p>
+            <p>• 各コントラクトの残高を個別に表示</p>
+            <p>• 合計残高も自動計算して表示</p>
           </div>
         </div>
       </div>

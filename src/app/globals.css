@@ -24,3 +24,55 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* WalletConnect Modal Fixes */
+wcm-modal,
+w3m-modal,
+[data-testid="wcm-modal"],
+.wcm-overlay {
+  max-height: 90vh !important;
+  max-width: 90vw !important;
+  overflow: auto !important;
+}
+
+/* Modal Content Area */
+wcm-modal-content,
+w3m-modal-content,
+.wcm-modal-content {
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  padding: 1rem !important;
+}
+
+/* Modal Router Container */
+wcm-modal-router,
+w3m-modal-router,
+.wcm-modal-router {
+  max-height: 75vh !important;
+  overflow-y: auto !important;
+}
+
+/* Wallet List */
+wcm-connect-wallet-view,
+w3m-connect-wallet-view,
+.wcm-connect-wallet-view {
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  wcm-modal,
+  w3m-modal,
+  [data-testid="wcm-modal"] {
+    max-height: 95vh !important;
+    max-width: 95vw !important;
+    margin: 2.5vh auto !important;
+  }
+  
+  wcm-modal-content,
+  w3m-modal-content,
+  .wcm-modal-content {
+    max-height: 85vh !important;
+  }
+}

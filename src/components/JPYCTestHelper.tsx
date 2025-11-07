@@ -53,7 +53,7 @@ export function JPYCTestHelper() {
                   JPYC公式が提供するテストネット用Faucet
                 </p>
                 <a
-                  href="https://faucet.jpyc.jp"
+                  href="https://faucet.jpyc.jp/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-amber-800 underline hover:text-amber-900"
@@ -71,14 +71,25 @@ export function JPYCTestHelper() {
                 </div>
               </div>
 
-              {/* Discord/コミュニティ */}
+              {/* コミュニティFaucet */}
               <div className="bg-white border border-amber-200 rounded p-3">
-                <h5 className="font-medium text-amber-900 mb-2">2. コミュニティ経由</h5>
+                <h5 className="font-medium text-amber-900 mb-2">2. コミュニティFaucet</h5>
                 <p className="text-xs text-amber-700 mb-2">
-                  JPYCコミュニティやDiscordでテストトークンをリクエスト
+                  JPYCコミュニティが提供するテストネット用Faucet
                 </p>
-                <div className="text-xs text-amber-600">
-                  開発者向けDiscord等で相談してみてください
+                <a
+                  href="https://www.jpyc.cool/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-amber-800 underline hover:text-amber-900"
+                >
+                  コミュニティ Faucet <ExternalLink className="h-3 w-3" />
+                </a>
+                <div className="mt-2 p-2 bg-amber-50 rounded text-xs text-amber-700">
+                  <p className="font-medium">💡 最新情報の確認:</p>
+                  <div className="mt-1 text-xs text-amber-600">
+                    X(旧Twitter)でJPYC関連アカウントを検索して最新情報をご確認ください
+                  </div>
                 </div>
               </div>
 
@@ -111,7 +122,7 @@ export function JPYCTestHelper() {
                 Etherscan確認 <ExternalLink className="h-3 w-3" />
               </a>
               <a
-                href={`https://sepolia.etherscan.io/token/${address && '0xE7C3D8C9a439feDe00D2600032D5dB0Be71C3c29'}?a=${address}`}
+                href={`https://sepolia.etherscan.io/token/0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB?a=${address}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-amber-800 underline hover:text-amber-900"

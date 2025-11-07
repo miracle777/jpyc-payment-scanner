@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
-import { JPYC_CONFIG, formatJPYCBalance } from '@/contracts/jpyc';
+import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { PaymentHistoryStorage } from '@/utils/paymentStorage';
 import { 
   CreditCard, 
@@ -27,26 +27,30 @@ interface PaymentData {
 
 interface PaymentScreenProps {
   scannedData: string;
+  selectedContract: 'official' | 'community';
   onBack: () => void;
   onSuccess: (txHash: string) => void;
 }
 
-export function PaymentScreen({ scannedData, onBack, onSuccess }: PaymentScreenProps) {
+export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess }: PaymentScreenProps) {
   const { address } = useAccount();
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // 選択されたコントラクトの設定を取得
+  const currentContract = selectedContract === 'official' ? JPYC_CONFIG : JPYC_COMMUNITY_CONFIG;
+
   // JPYC残高取得
   const { data: balance } = useReadContract({
-    address: JPYC_CONFIG.address,
-    abi: JPYC_CONFIG.abi,
+    address: currentContract.address,
+    abi: currentContract.abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
   });
 
   const { data: decimals } = useReadContract({
-    address: JPYC_CONFIG.address,
-    abi: JPYC_CONFIG.abi,
+    address: currentContract.address,
+    abi: currentContract.abi,
     functionName: 'decimals',
   });
 
@@ -136,8 +140,8 @@ export function PaymentScreen({ scannedData, onBack, onSuccess }: PaymentScreenP
       const amount = BigInt(Number(paymentData.amount) * (10 ** (decimals as number || 18)));
       
       writeContract({
-        address: JPYC_CONFIG.address,
-        abi: JPYC_CONFIG.abi,
+        address: currentContract.address,
+        abi: currentContract.abi,
         functionName: 'transfer',
         args: [paymentData.recipient as `0x${string}`, amount],
       });
@@ -203,7 +207,7 @@ export function PaymentScreen({ scannedData, onBack, onSuccess }: PaymentScreenP
 
   const balanceValue = balance as bigint || BigInt(0);
   const decimalsValue = decimals as number || 18;
-  const currentBalance = Number(formatJPYCBalance(balanceValue, decimalsValue));
+  const currentBalance = Number(balanceValue / BigInt(10 ** decimalsValue)); // JPYCを整数として計算
   const paymentAmount = Number(paymentData.amount);
   const hasEnoughBalance = currentBalance >= paymentAmount;
 
@@ -231,10 +235,10 @@ export function PaymentScreen({ scannedData, onBack, onSuccess }: PaymentScreenP
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-blue-900">
-                {paymentData.amount} JPYC
+                {Number(paymentData.amount).toLocaleString('ja-JP')} JPYC
               </p>
               <p className="text-sm text-blue-600">
-                ≈ {paymentData.amount}円
+                ≈ {Number(paymentData.amount).toLocaleString('ja-JP')}円
               </p>
             </div>
           </div>
@@ -275,17 +279,25 @@ export function PaymentScreen({ scannedData, onBack, onSuccess }: PaymentScreenP
 
         {/* 残高確認 */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-gray-500">
+              使用コントラクト: {selectedContract === 'official' ? '公式 JPYC' : 'コミュニティ JPYC'}
+            </span>
+            <span className="text-xs font-mono text-gray-400">
+              {currentContract.address.slice(0, 6)}...{currentContract.address.slice(-4)}
+            </span>
+          </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">現在の残高</span>
             <span className="font-medium text-gray-900">
-              {formatJPYCBalance(balanceValue, decimalsValue)} JPYC
+              {formatJPYCDisplay(balanceValue, decimalsValue)} JPYC
             </span>
           </div>
           <div className="flex items-center justify-between mt-2">
             <span className="text-sm text-gray-600">決済後残高</span>
             <span className={`font-medium ${hasEnoughBalance ? 'text-green-600' : 'text-red-600'}`}>
               {hasEnoughBalance 
-                ? `${(currentBalance - paymentAmount).toFixed(2)} JPYC`
+                ? `${(currentBalance - paymentAmount).toLocaleString('ja-JP')} JPYC`
                 : '残高不足'
               }
             </span>

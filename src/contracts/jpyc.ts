@@ -2,8 +2,8 @@ import { getAddress } from 'viem';
 
 // JPYC Contract Configuration
 export const JPYC_CONFIG = {
-  // Sepolia testnet JPYC contract address (from community faucet) - 正確なアドレス
-  address: getAddress('0xd3eF95d29A198868241FE374A999fc25F6152253'),
+  // 公式JPYC Faucet (Sepolia testnet)
+  address: getAddress('0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB'),
   abi: [
     // ERC20 Standard Functions
     {
@@ -74,45 +74,27 @@ export const JPYC_CONFIG = {
   ] as const,
 } as const;
 
-// Utility function to format JPYC balance
+// Utility function to format JPYC balance (1JPYC = 1円スタイル)
 export function formatJPYCBalance(balance: bigint, decimals: number = 18): string {
   const divisor = BigInt(10 ** decimals);
   const wholePart = balance / divisor;
-  const fractionalPart = balance % divisor;
   
-  if (fractionalPart === BigInt(0)) {
-    return wholePart.toString();
-  }
-  
-  const fractionalStr = fractionalPart.toString().padStart(decimals, '0');
-  const trimmedFractional = fractionalStr.replace(/0+$/, '');
-  
-  if (trimmedFractional === '') {
-    return wholePart.toString();
-  }
-  
-  return `${wholePart}.${trimmedFractional}`;
+  // JPYCは整数で表示（円と同様）
+  return wholePart.toString();
 }
 
-// Format balance for display
+// Format balance for display (日本円スタイル)
 export function formatJPYCDisplay(balance: bigint, decimals: number = 18): string {
-  const formatted = formatJPYCBalance(balance, decimals);
-  const number = parseFloat(formatted);
+  const wholePart = balance / BigInt(10 ** decimals);
+  const number = Number(wholePart);
   
-  if (number >= 1000000) {
-    return `${(number / 1000000).toFixed(2)}M`;
-  } else if (number >= 1000) {
-    return `${(number / 1000).toFixed(2)}K`;
-  } else if (number >= 1) {
-    return number.toFixed(2);
-  } else {
-    return number.toFixed(4);
-  }
+  // 日本円と同様に3桁区切りで表示
+  return number.toLocaleString('ja-JP');
 }
 
-// 代替JPYC契約設定（Faucetで見つかったアドレス用）
-export const JPYC_FAUCET_CONFIG = {
-  // Faucetで実際に使用されているJPYCコントラクト
-  address: '0xBba72DE9359a1949845843f106ecd1296e020e8' as `0x${string}`,
+// コミュニティJPYC契約設定
+export const JPYC_COMMUNITY_CONFIG = {
+  // コミュニティJPYCコントラクト (jpyc.cool)
+  address: getAddress('0xd3eF95d29A198868241FE374A999fc25F6152253'),
   abi: JPYC_CONFIG.abi,
 } as const;

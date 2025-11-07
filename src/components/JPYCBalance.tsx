@@ -1,21 +1,38 @@
 'use client';
 
 import { useAccount, useReadContract } from 'wagmi';
-import { JPYC_CONFIG, JPYC_FAUCET_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
-import { Coins, AlertCircle, RefreshCw, Info } from 'lucide-react';
+import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
+import { Coins, AlertCircle, RefreshCw, Info, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-export function JPYCBalance() {
+interface JPYCBalanceProps {
+  selectedContract?: 'official' | 'community';
+  onContractChange?: (contract: 'official' | 'community') => void;
+}
+
+export function JPYCBalance({ selectedContract: externalSelectedContract, onContractChange }: JPYCBalanceProps = {}) {
   const { address, isConnected } = useAccount();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [internalSelectedContract, setInternalSelectedContract] = useState<'official' | 'community'>('official');
+  
+  // 外部からの制御がある場合は外部の状態を使用、そうでなければ内部の状態を使用
+  const selectedContract = externalSelectedContract ?? internalSelectedContract;
+  const setSelectedContract = (value: 'official' | 'community') => {
+    if (onContractChange) {
+      onContractChange(value);
+    } else {
+      setInternalSelectedContract(value);
+    }
+  };
 
+  // 公式JPYC残高取得
   const {
-    data: balance,
-    isError: balanceError,
-    isLoading: balanceLoading,
-    error: balanceErrorDetail,
-    refetch,
+    data: officialBalance,
+    isError: officialBalanceError,
+    isLoading: officialBalanceLoading,
+    error: officialBalanceErrorDetail,
+    refetch: officialRefetch,
   } = useReadContract({
     address: JPYC_CONFIG.address,
     abi: JPYC_CONFIG.abi,
@@ -28,8 +45,8 @@ export function JPYCBalance() {
   });
 
   const {
-    data: decimals,
-    isError: decimalsError,
+    data: officialDecimals,
+    isError: officialDecimalsError,
   } = useReadContract({
     address: JPYC_CONFIG.address,
     abi: JPYC_CONFIG.abi,
@@ -40,8 +57,8 @@ export function JPYCBalance() {
   });
 
   const {
-    data: symbol,
-    isError: symbolError,
+    data: officialSymbol,
+    isError: officialSymbolError,
   } = useReadContract({
     address: JPYC_CONFIG.address,
     abi: JPYC_CONFIG.abi,
@@ -51,15 +68,15 @@ export function JPYCBalance() {
     },
   });
 
-  // Faucet用JPYCコントラクトでの残高確認
+  // コミュニティJPYC残高取得
   const {
-    data: faucetBalance,
-    isError: faucetBalanceError,
-    isLoading: faucetBalanceLoading,
-    refetch: faucetRefetch,
+    data: communityBalance,
+    isError: communityBalanceError,
+    isLoading: communityBalanceLoading,
+    refetch: communityRefetch,
   } = useReadContract({
-    address: JPYC_FAUCET_CONFIG.address,
-    abi: JPYC_FAUCET_CONFIG.abi,
+    address: JPYC_COMMUNITY_CONFIG.address,
+    abi: JPYC_COMMUNITY_CONFIG.abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: {
@@ -69,10 +86,10 @@ export function JPYCBalance() {
   });
 
   const {
-    data: faucetDecimals,
+    data: communityDecimals,
   } = useReadContract({
-    address: JPYC_FAUCET_CONFIG.address,
-    abi: JPYC_FAUCET_CONFIG.abi,
+    address: JPYC_COMMUNITY_CONFIG.address,
+    abi: JPYC_COMMUNITY_CONFIG.abi,
     functionName: 'decimals',
     query: {
       enabled: !!address && isConnected,
@@ -80,10 +97,10 @@ export function JPYCBalance() {
   });
 
   const {
-    data: faucetSymbol,
+    data: communitySymbol,
   } = useReadContract({
-    address: JPYC_FAUCET_CONFIG.address,
-    abi: JPYC_FAUCET_CONFIG.abi,
+    address: JPYC_COMMUNITY_CONFIG.address,
+    abi: JPYC_COMMUNITY_CONFIG.abi,
     functionName: 'symbol',
     query: {
       enabled: !!address && isConnected,
@@ -95,32 +112,33 @@ export function JPYCBalance() {
     const debugInfo = {
       address,
       isConnected,
-      contractAddress: JPYC_CONFIG.address,
-      balance: balance?.toString(),
-      decimals,
-      symbol,
-      balanceError,
-      decimalsError,
-      symbolError,
-      // Faucet contract info
-      faucetContractAddress: JPYC_FAUCET_CONFIG.address,
-      faucetBalance: faucetBalance?.toString(),
-      faucetDecimals,
-      faucetSymbol,
-      faucetBalanceError,
+      // 公式契約情報
+      officialContractAddress: JPYC_CONFIG.address,
+      officialBalance: officialBalance?.toString(),
+      officialDecimals,
+      officialSymbol,
+      officialBalanceError,
+      officialDecimalsError,
+      officialSymbolError,
+      // コミュニティ契約情報
+      communityContractAddress: JPYC_COMMUNITY_CONFIG.address,
+      communityBalance: communityBalance?.toString(),
+      communityDecimals,
+      communitySymbol,
+      communityBalanceError,
     };
     console.log('🔍 JPYC Balance Debug:', debugInfo);
-    console.log('📊 Raw Balance (bigint):', balance);
-    console.log('🚰 Faucet Balance (bigint):', faucetBalance);
-    console.log('🔢 Decimals:', decimals);
-    console.log('🏷️ Symbol:', symbol);
-    console.log('❌ Errors:', { balanceError, decimalsError, symbolError });
-  }, [address, isConnected, balance, decimals, symbol, balanceError, decimalsError, symbolError, faucetBalance, faucetDecimals, faucetSymbol, faucetBalanceError]);
+    console.log('📊 公式残高 (bigint):', officialBalance);
+    console.log('🌍 コミュニティ残高 (bigint):', communityBalance);
+    console.log('🔢 Decimals:', officialDecimals);
+    console.log('🏷️ Symbol:', officialSymbol);
+    console.log('❌ Errors:', { officialBalanceError, officialDecimalsError, officialSymbolError });
+  }, [address, isConnected, officialBalance, officialDecimals, officialSymbol, officialBalanceError, officialDecimalsError, officialSymbolError, communityBalance, communityDecimals, communitySymbol, communityBalanceError]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([refetch(), faucetRefetch()]);
+      await Promise.all([officialRefetch(), communityRefetch()]);
     } finally {
       setTimeout(() => setIsRefreshing(false), 1000);
     }
@@ -140,7 +158,7 @@ export function JPYCBalance() {
     );
   }
 
-  const hasError = balanceError || decimalsError || symbolError;
+  const hasError = officialBalanceError || officialDecimalsError || officialSymbolError;
 
   if (hasError) {
     return (
@@ -152,10 +170,10 @@ export function JPYCBalance() {
         <p className="text-sm text-red-600 mt-1">
           JPYC残高の取得に失敗しました
         </p>
-        {showDebug && balanceErrorDetail && (
+        {showDebug && officialBalanceErrorDetail && (
           <div className="mt-2 p-2 bg-red-100 rounded text-xs font-mono text-red-800 max-h-32 overflow-y-auto">
             <p className="font-semibold mb-1">エラー詳細:</p>
-            <p>{balanceErrorDetail.message}</p>
+            <p>{officialBalanceErrorDetail.message}</p>
           </div>
         )}
         <div className="flex gap-2 mt-2">
@@ -176,27 +194,28 @@ export function JPYCBalance() {
     );
   }
 
-  const balanceValue = balance as bigint | undefined;
-  const decimalsValue = decimals as number | undefined;
-  const symbolValue = symbol as string | undefined;
+  const officialBalanceValue = officialBalance as bigint | undefined;
+  const officialDecimalsValue = officialDecimals as number | undefined;
+  const officialSymbolValue = officialSymbol as string | undefined;
 
-  const faucetBalanceValue = faucetBalance as bigint | undefined;
-  const faucetDecimalsValue = faucetDecimals as number | undefined;
-  const faucetSymbolValue = faucetSymbol as string | undefined;
+  const communityBalanceValue = communityBalance as bigint | undefined;
+  const communityDecimalsValue = communityDecimals as number | undefined;
+  const communitySymbolValue = communitySymbol as string | undefined;
 
-  const formattedBalance = balanceValue && decimalsValue
-    ? formatJPYCDisplay(balanceValue, decimalsValue)
+  const formattedOfficialBalance = officialBalanceValue && officialDecimalsValue
+    ? formatJPYCDisplay(officialBalanceValue, officialDecimalsValue)
     : '0';
 
-  const formattedFaucetBalance = faucetBalanceValue && faucetDecimalsValue
-    ? formatJPYCDisplay(faucetBalanceValue, faucetDecimalsValue)
+  const formattedCommunityBalance = communityBalanceValue && communityDecimalsValue
+    ? formatJPYCDisplay(communityBalanceValue, communityDecimalsValue)
     : '0';
 
-  const displaySymbol = symbolValue || faucetSymbolValue || 'JPYC';
+  const displaySymbol = officialSymbolValue || communitySymbolValue || 'JPYC';
   
-  // どちらかに残高がある場合は表示
-  const hasBalance = (faucetBalanceValue && faucetBalanceValue > 0n) || (balanceValue && balanceValue > 0n);
-  const mainBalance = faucetBalanceValue && faucetBalanceValue > 0n ? formattedFaucetBalance : formattedBalance;
+  // 選択されたコントラクトの残高を表示
+  const isOfficialContract = selectedContract === 'official';
+  const currentBalance = isOfficialContract ? formattedOfficialBalance : formattedCommunityBalance;
+  const currentContractAddress = isOfficialContract ? JPYC_CONFIG.address : JPYC_COMMUNITY_CONFIG.address;
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
@@ -215,18 +234,42 @@ export function JPYCBalance() {
           </button>
           <button
             onClick={handleRefresh}
-            disabled={balanceLoading || isRefreshing}
+            disabled={(officialBalanceLoading || communityBalanceLoading) || isRefreshing}
             className="p-1 text-blue-600 hover:text-blue-800 transition-colors disabled:opacity-50"
           >
             <RefreshCw 
-              className={`h-4 w-4 ${(balanceLoading || isRefreshing) ? 'animate-spin' : ''}`} 
+              className={`h-4 w-4 ${((officialBalanceLoading || communityBalanceLoading) || isRefreshing) ? 'animate-spin' : ''}`} 
             />
           </button>
         </div>
       </div>
+
+      {/* コントラクト選択 */}
+      <div className="mt-3 flex gap-1">
+        <button
+          onClick={() => setSelectedContract('official')}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            selectedContract === 'official'
+              ? 'bg-blue-600 text-white'
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+          }`}
+        >
+          公式 JPYC ({formattedOfficialBalance})
+        </button>
+        <button
+          onClick={() => setSelectedContract('community')}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            selectedContract === 'community'
+              ? 'bg-green-600 text-white'
+              : 'bg-green-100 text-green-700 hover:bg-green-200'
+          }`}
+        >
+          コミュニティ JPYC ({formattedCommunityBalance})
+        </button>
+      </div>
       
-      <div className="mt-2">
-        {balanceLoading ? (
+      <div className="mt-3">
+        {(officialBalanceLoading || communityBalanceLoading) ? (
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             <span className="text-sm text-blue-600">残高を確認中...</span>
@@ -234,23 +277,47 @@ export function JPYCBalance() {
         ) : (
           <>
             <p className="text-2xl font-bold text-blue-900">
-              {mainBalance} {displaySymbol}
+              {currentBalance} {displaySymbol}
             </p>
-            {faucetBalanceValue && faucetBalanceValue > 0n && (
-              <p className="text-xs text-green-600 mt-1">
-                ✅ Faucet残高: {formattedFaucetBalance} {displaySymbol}
-              </p>
-            )}
-            {formattedBalance !== '0' && formattedFaucetBalance === '0' && (
-              <p className="text-xs text-blue-600 mt-1">
-                📜 公式残高: {formattedBalance} {displaySymbol}
-              </p>
-            )}
             <p className="text-xs text-blue-600 mt-1">
-              Sepolia testnet • 30秒ごと自動更新
+              {isOfficialContract ? '🏛️ 公式コントラクト' : '🌍 コミュニティコントラクト'} • Sepolia testnet • 30秒ごと自動更新
             </p>
           </>
         )}
+      </div>
+
+      {/* JPYC Faucetサイトリンク */}
+      <div className="mt-3 pt-3 border-t border-blue-200">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-blue-800">
+            � テスト用JPYC取得方法:
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <a
+              href="https://faucet.jpyc.jp/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-700 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+            >
+              公式 JPYC Faucet
+              <ExternalLink className="h-3 w-3" />
+            </a>
+            <a
+              href="https://www.jpyc.cool/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-green-700 bg-green-100 rounded hover:bg-green-200 transition-colors"
+            >
+              コミュニティ Faucet
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+          <p className="text-xs text-gray-600">
+            💡 Faucetが機能しない場合は、X(旧Twitter)でJPYC関連の最新情報をご確認ください
+          </p>
+        </div>
       </div>
 
       {/* Debug Information */}
@@ -263,15 +330,15 @@ export function JPYCBalance() {
             </div>
             <div className="bg-blue-100 p-2 rounded">
               <p className="text-blue-800"><strong>公式コントラクト:</strong> {JPYC_CONFIG.address}</p>
-              <p className="text-blue-800"><strong>公式残高:</strong> {balanceValue?.toString() || 'null'}</p>
+              <p className="text-blue-800"><strong>公式残高:</strong> {officialBalanceValue?.toString() || 'null'}</p>
             </div>
             <div className="bg-green-100 p-2 rounded">
-              <p className="text-green-800"><strong>Faucetコントラクト:</strong> {JPYC_FAUCET_CONFIG.address}</p>
-              <p className="text-green-800"><strong>Faucet残高:</strong> {faucetBalanceValue?.toString() || 'null'}</p>
+              <p className="text-green-800"><strong>コミュニティコントラクト:</strong> {JPYC_COMMUNITY_CONFIG.address}</p>
+              <p className="text-green-800"><strong>コミュニティ残高:</strong> {communityBalanceValue?.toString() || 'null'}</p>
             </div>
             <div className="bg-blue-100 p-2 rounded">
-              <p className="text-blue-800"><strong>Decimals:</strong> {decimalsValue || 'null'} / {faucetDecimalsValue || 'null'}</p>
-              <p className="text-blue-800"><strong>Symbol:</strong> {symbolValue || 'null'} / {faucetSymbolValue || 'null'}</p>
+              <p className="text-blue-800"><strong>Decimals:</strong> {officialDecimalsValue || 'null'} / {communityDecimalsValue || 'null'}</p>
+              <p className="text-blue-800"><strong>Symbol:</strong> {officialSymbolValue || 'null'} / {communitySymbolValue || 'null'}</p>
             </div>
           </div>
         </div>
@@ -280,41 +347,55 @@ export function JPYCBalance() {
       {/* Contract Address Display */}
       <div className="mt-3 pt-3 border-t border-blue-200">
         <p className="text-xs font-medium text-blue-800 mb-1">
-          コントラクトアドレス:
+          選択中のコントラクト:
         </p>
         <p className="text-xs font-mono text-blue-700 break-all">
-          {JPYC_CONFIG.address}
+          {currentContractAddress}
         </p>
         
         {/* 残高が0の場合のヘルプ */}
-        {formattedBalance === '0' && (
+        {currentBalance === '0' && (
           <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-            <p className="text-xs font-medium text-yellow-800 mb-2">💡 残高が0の場合:</p>
+            <p className="text-xs font-medium text-yellow-800 mb-2">💡 残高が表示されない場合:</p>
             <div className="space-y-2 text-xs text-yellow-700">
               <div className="flex items-start gap-2">
                 <span>•</span>
                 <div>
                   <p>テスト用JPYCを取得していない</p>
-                  <p className="text-yellow-600">→ JPYC公式のテストネット配布を確認</p>
+                  <p className="text-yellow-600">→ 下のFaucetリンクからJPYCを取得してください</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <span>•</span>
                 <div>
-                  <p>別のアドレスで受け取った</p>
-                  <p className="text-yellow-600">→ ウォレットタブで任意アドレスを確認</p>
+                  <p>別のコントラクトに残高がある</p>
+                  <p className="text-yellow-600">→ 上の「公式 JPYC」「コミュニティ JPYC」ボタンで切り替え</p>
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <span>•</span>
                 <div>
-                  <p>Sepoliaネットワークではない</p>
-                  <p className="text-yellow-600">→ MetaMaskでネットワークを確認</p>
+                  <p>ネットワーク設定を確認</p>
+                  <p className="text-yellow-600">→ MetaMaskでSepoliaテストネットに接続</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span>•</span>
+                <div>
+                  <p>JPYCの最新情報を確認したい場合</p>
+                  <p className="text-yellow-600">→ X(旧Twitter)でJPYCの関連アカウントを検索</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span>•</span>
+                <div>
+                  <p>表示について</p>
+                  <p className="text-yellow-600">→ JPYCは1JPYC=1円として整数表示（例: 2,500 JPYC）</p>
                 </div>
               </div>
             </div>
             <a
-              href={`https://sepolia.etherscan.io/token/${JPYC_CONFIG.address}?a=${address}`}
+              href={`https://sepolia.etherscan.io/token/${currentContractAddress}?a=${address}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block mt-2 text-xs text-yellow-800 underline hover:text-yellow-900"
@@ -324,7 +405,7 @@ export function JPYCBalance() {
           </div>
         )}
         
-        <p className="text-xs text-blue-600 mt-1">
+        <p className="text-xs text-blue-600 mt-2">
           ⚠️ これはテスト用JPYCです（価値はありません）
         </p>
       </div>
