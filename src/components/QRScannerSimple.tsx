@@ -17,6 +17,31 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
+  const generateSampleData = () => {
+    const now = 1762568209578; // 固定タイムスタンプ
+    return [
+      JSON.stringify({
+        type: 'JPYC_PAYMENT',
+        version: '1.0',
+        amount: '100',
+        currency: 'JPYC',
+        network: 'sepolia',
+        contractAddress: '0x431D5dfF03120AFA4bDf332c61A6e1766eF37BDB',
+        contractName: '公式JPYC (Sepolia)',
+        merchant: {
+          name: 'テストショップ',
+          id: 'JPYC_TEST123',
+          description: 'サンプル店舗'
+        },
+        to: '0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
+        timestamp: now,
+        expires: now + (5 * 60 * 1000)
+      }),
+      'ethereum:0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
+      'jpyc:amount=50&to=0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd'
+    ];
+  };
+
   const stopScanning = () => {
     if (scannerRef.current) {
       scannerRef.current.stop();
@@ -31,25 +56,40 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
 
     try {
       setError(null);
+      setIsScanning(true);
 
+      // QrScannerの設定を詳細に指定
       scannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
+          console.log('QR Code detected:', result.data);
           onScanResult(result.data);
-          setIsScanning(false);
-          scannerRef.current?.stop();
+          stopScanning();
         },
         {
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',
+          maxScansPerSecond: 5,
+          calculateScanRegion: (video) => {
+            const smallerDimension = Math.min(video.videoWidth, video.videoHeight);
+            const scanRegionSize = Math.round(0.7 * smallerDimension);
+            return {
+              x: Math.round((video.videoWidth - scanRegionSize) / 2),
+              y: Math.round((video.videoHeight - scanRegionSize) / 2),
+              width: scanRegionSize,
+              height: scanRegionSize,
+            };
+          },
         }
       );
 
       await scannerRef.current.start();
-      setIsScanning(true);
-    } catch {
-      setError('カメラの起動に失敗しました');
+      console.log('Camera started successfully');
+    } catch (err: unknown) {
+      console.error('Camera start error:', err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`カメラの起動に失敗しました: ${errorMessage}`);
       setIsScanning(false);
     }
   };
@@ -67,17 +107,31 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
     
     const checkCamera = async () => {
       try {
+        // カメラの利用可能性を確認
         const hasCamera = await QrScanner.hasCamera();
+        console.log('Camera availability:', hasCamera);
+        
         if (mounted) {
           setHasCamera(hasCamera);
           if (!hasCamera) {
-            setError('カメラが利用できません（手動入力をご利用ください）');
+            setError('カメラが利用できません。手動入力をご利用ください。');
+          } else {
+            console.log('Camera is available');
+            // カメラリストを取得（デバッグ用）
+            try {
+              const cameras = await QrScanner.listCameras(true);
+              console.log('Available cameras:', cameras);
+            } catch (err) {
+              console.warn('Could not list cameras:', err);
+            }
           }
         }
-      } catch {
+      } catch (err: unknown) {
+        console.error('Camera check error:', err);
         if (mounted) {
           setHasCamera(false);
-          setError('カメラの確認中にエラーが発生しました');
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          setError(`カメラの確認中にエラーが発生しました: ${errorMessage}`);
         }
       }
     };
@@ -113,32 +167,65 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
       </div>
 
       {/* カメラビュー */}
-      <div className="relative">
+      <div className="relative w-full">
+        {/* カメラプレビュー */}
         <video
           ref={videoRef}
-          className={`w-full rounded-lg ${isScanning ? 'block' : 'hidden'}`}
-          style={{ aspectRatio: '4/3' }}
+          className={`w-full h-64 sm:h-80 object-cover rounded-lg border-2 ${
+            isScanning 
+              ? 'border-blue-600 shadow-lg' 
+              : 'border-gray-300'
+          }`}
+          style={{ 
+            display: isScanning ? 'block' : 'none',
+            backgroundColor: '#000'
+          }}
+          playsInline
+          muted
+          autoPlay
         />
         
+        {/* プレースホルダー（非スキャン時） */}
         {!isScanning && (
-          <div className="bg-gray-100 rounded-lg flex items-center justify-center h-48">
+          <div className="w-full h-64 sm:h-80 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
             <div className="text-center">
-              <Camera className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-600 text-sm">
-                QRコードをスキャンしてください
+              <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Camera className="h-8 w-8 text-gray-500" />
+              </div>
+              <p className="text-gray-700 font-medium mb-1">
+                カメラでQRコードをスキャン
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                PCの場合は手動入力をお試しください
+              <p className="text-xs text-gray-500">
+                「カメラを起動」ボタンを押してください
               </p>
             </div>
           </div>
         )}
 
+        {/* スキャンオーバーレイ */}
         {isScanning && (
-          <div className="absolute inset-0 border-2 border-blue-600 rounded-lg pointer-events-none">
-            <div className="absolute inset-4 border border-white/50 rounded"></div>
-            <div className="absolute top-2 left-2 bg-blue-600 text-white px-2 py-1 rounded text-xs">
-              スキャン中...
+          <div className="absolute inset-0 pointer-events-none">
+            {/* スキャンフレーム */}
+            <div className="absolute inset-4 border-2 border-white/70 rounded-lg shadow-lg">
+              {/* 角の装飾 */}
+              <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-blue-400 rounded-tl-lg"></div>
+              <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-blue-400 rounded-tr-lg"></div>
+              <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-blue-400 rounded-bl-lg"></div>
+              <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-blue-400 rounded-br-lg"></div>
+              
+              {/* スキャンライン */}
+              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-blue-400 shadow-lg animate-pulse"></div>
+            </div>
+            
+            {/* ステータス表示 */}
+            <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
+              <div className="bg-black/70 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                スキャン中
+              </div>
+              <div className="bg-black/70 text-white px-3 py-1.5 rounded-full text-xs">
+                QRコードを枠内に合わせてください
+              </div>
             </div>
           </div>
         )}
@@ -231,17 +318,14 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
         <div className="text-yellow-800 text-xs font-medium mb-2">💡 テスト用サンプルデータ：</div>
         <div className="space-y-1">
-          {[
-            'ethereum:0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
-            'jpyc:amount=1000&to=0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
-            'payment:merchant=TestShop&amount=500&currency=JPYC'
-          ].map((sample, index) => (
+          {generateSampleData().map((sample, index) => (
             <button
               key={index}
               onClick={() => onScanResult(sample)}
               className="w-full text-left text-xs font-mono bg-white border border-yellow-300 rounded p-2 hover:bg-yellow-50 transition-colors text-gray-700 truncate"
+              title={sample}
             >
-              {sample}
+              {index === 0 ? '新形式JPYC決済' : index === 1 ? 'Ethereumアドレス' : 'JPYC旧形式'}
             </button>
           ))}
         </div>

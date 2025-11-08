@@ -6,7 +6,20 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error) => {
+        // MetaMaskエラーの場合はリトライしない
+        if (error?.message?.includes('User rejected') || 
+            error?.message?.includes('user rejected')) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+    },
+  },
+});
 
 const config = getDefaultConfig({
   appName: process.env.NEXT_PUBLIC_APP_NAME || 'JPYC Payment Scanner',
@@ -19,7 +32,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <RainbowKitProvider
+          modalSize="compact"
+          initialChain={sepolia}
+        >
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

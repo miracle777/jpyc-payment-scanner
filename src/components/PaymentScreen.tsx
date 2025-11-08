@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { parseEther, formatEther } from 'viem';
+import { parseEther, formatEther, isAddress, getAddress } from 'viem';
 import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { PaymentHistoryStorage } from '@/utils/paymentStorage';
 import { 
@@ -23,6 +23,8 @@ interface PaymentData {
   recipient: string;
   merchant?: string;
   description?: string;
+  merchantId?: string;
+  merchantDescription?: string;
 }
 
 interface PaymentScreenProps {
@@ -35,10 +37,42 @@ interface PaymentScreenProps {
 export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess }: PaymentScreenProps) {
   const { address } = useAccount();
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   // 選択されたコントラクトの設定を取得
   const currentContract = selectedContract === 'official' ? JPYC_CONFIG : JPYC_COMMUNITY_CONFIG;
+
+  // アドレス検証・正規化ヘルパー
+  const validateAndFormatAddress = (addr: string): string | null => {
+    try {
+      // 空文字列やnullの場合
+      if (!addr || typeof addr !== 'string') {
+        console.log('❌ Address is empty or invalid type:', addr);
+        return null;
+      }
+
+      // アドレスの前後の空白を除去
+      const trimmedAddr = addr.trim();
+      
+      // 0x prefixがない場合は追加
+      const prefixedAddr = trimmedAddr.startsWith('0x') ? trimmedAddr : `0x${trimmedAddr}`;
+      
+      console.log('🔍 Validating address:', prefixedAddr);
+
+      // アドレスの形式チェック
+      if (!isAddress(prefixedAddr)) {
+        console.log('❌ Invalid address format:', prefixedAddr);
+        return null;
+      }
+
+      // チェックサム付きアドレスに正規化
+      const checksumAddress = getAddress(prefixedAddr);
+      console.log('✅ Validated and normalized address:', checksumAddress);
+      return checksumAddress;
+    } catch (error) {
+      console.error('❌ Address validation error:', error, 'for address:', addr);
+      return null;
+    }
+  };
 
   // JPYC残高取得
   const { data: balance } = useReadContract({
@@ -61,15 +95,69 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
     useWaitForTransactionReceipt({ hash });
 
   // QRコードデータを解析
-  const parseQRData = (data: string): PaymentData | null => {
+  const parseQRData = useCallback((data: string): PaymentData | null => {
     try {
+      console.log('🔍 Parsing QR data:', data);
+
+      // JSON形式の場合（新しい形式）
+      try {
+        const parsed = JSON.parse(data);
+        console.log('📊 Parsed JSON:', parsed);
+        
+        // JPYC_PAYMENT形式
+        if (parsed.type === 'JPYC_PAYMENT') {
+          const validatedAddress = validateAndFormatAddress(parsed.to);
+          if (!validatedAddress) {
+            console.log('❌ Invalid recipient address in JPYC_PAYMENT:', parsed.to);
+            return null;
+          }
+          
+          const result = {
+            amount: parsed.amount || '10',
+            recipient: validatedAddress,
+            merchant: parsed.merchant?.name || parsed.contractName || `${parsed.currency || 'JPYC'} 決済`,
+            description: `${parsed.contractName || '公式JPYC'} による決済 (${parsed.network || 'sepolia'})`,
+            merchantId: parsed.merchant?.id,
+            merchantDescription: parsed.merchant?.description
+          };
+          console.log('✅ JPYC_PAYMENT format parsed:', result);
+          return result;
+        }
+
+        // 一般的なJSONフォーマット
+        if (parsed.amount && (parsed.recipient || parsed.to)) {
+          const targetAddress = parsed.recipient || parsed.to;
+          const validatedAddress = validateAndFormatAddress(targetAddress);
+          if (!validatedAddress) {
+            console.log('❌ Invalid recipient address in generic JSON:', targetAddress);
+            return null;
+          }
+          
+          const result = {
+            amount: parsed.amount,
+            recipient: validatedAddress,
+            merchant: parsed.merchant,
+            description: parsed.description || 'JSON形式の決済'
+          };
+          console.log('✅ Generic JSON format parsed:', result);
+          return result;
+        }
+      } catch {
+        console.log('📝 Not JSON format, trying other patterns...');
+      }
+
       // パターン1: ethereum:address形式
       if (data.startsWith('ethereum:')) {
         const addressMatch = data.match(/ethereum:([0-9a-fA-Fx]+)/);
         if (addressMatch) {
+          const validatedAddress = validateAndFormatAddress(addressMatch[1]);
+          if (!validatedAddress) {
+            console.log('❌ Invalid address in ethereum format:', addressMatch[1]);
+            return null;
+          }
           return {
             amount: '10', // デフォルト金額
-            recipient: addressMatch[1],
+            recipient: validatedAddress,
             description: 'Ethereum アドレス宛送金'
           };
         }
@@ -80,9 +168,14 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
         const amountMatch = data.match(/amount=([0-9.]+)/);
         const toMatch = data.match(/to=([0-9a-fA-Fx]+)/);
         if (amountMatch && toMatch) {
+          const validatedAddress = validateAndFormatAddress(toMatch[1]);
+          if (!validatedAddress) {
+            console.log('❌ Invalid address in jpyc format:', toMatch[1]);
+            return null;
+          }
           return {
             amount: amountMatch[1],
-            recipient: toMatch[1],
+            recipient: validatedAddress,
             description: 'JPYC 決済'
           };
         }
@@ -92,12 +185,17 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
       if (data.startsWith('payment:')) {
         const merchantMatch = data.match(/merchant=([^&]+)/);
         const amountMatch = data.match(/amount=([0-9.]+)/);
-        const currencyMatch = data.match(/currency=([^&]+)/);
         
         if (merchantMatch && amountMatch) {
+          const defaultAddress = '0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd';
+          const validatedAddress = validateAndFormatAddress(defaultAddress);
+          if (!validatedAddress) {
+            console.log('❌ Invalid default address:', defaultAddress);
+            return null;
+          }
           return {
             amount: amountMatch[1],
-            recipient: '0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd', // あなたのテスト用アドレス
+            recipient: validatedAddress,
             merchant: merchantMatch[1],
             description: `${merchantMatch[1]}での決済`
           };
@@ -106,35 +204,36 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
 
       // パターン4: 直接アドレス形式
       if (/^0x[a-fA-F0-9]{40}$/.test(data)) {
+        const validatedAddress = validateAndFormatAddress(data);
+        if (!validatedAddress) {
+          console.log('❌ Invalid direct address:', data);
+          return null;
+        }
         return {
           amount: '10',
-          recipient: data,
+          recipient: validatedAddress,
           description: 'アドレス宛送金'
         };
       }
 
-      // JSON形式の場合
-      const parsed = JSON.parse(data);
-      if (parsed.amount && parsed.recipient) {
-        return parsed;
-      }
-
+      console.log('❌ No pattern matched for:', data);
       return null;
-    } catch {
+    } catch (error) {
+      console.error('❌ Parse error:', error);
       return null;
     }
-  };
+  }, []);
 
   // 初期化時にQRデータを解析
-  useState(() => {
+  useEffect(() => {
     const parsed = parseQRData(scannedData);
+    console.log('🎯 Final parsed data:', parsed);
     setPaymentData(parsed);
-  });
+  }, [scannedData, parseQRData]);
 
   const handlePayment = async () => {
     if (!paymentData || !address) return;
 
-    setIsProcessing(true);
     try {
       // JPYCトークンの送金実行
       const amount = BigInt(Number(paymentData.amount) * (10 ** (decimals as number || 18)));
@@ -147,23 +246,31 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
       });
     } catch (error) {
       console.error('Payment error:', error);
-      setIsProcessing(false);
     }
   };
 
   // トランザクション完了時に履歴を保存
   useEffect(() => {
     if (isConfirmed && hash && paymentData) {
-      // 決済履歴を保存
-      PaymentHistoryStorage.savePayment({
-        transactionHash: hash,
-        to: paymentData.recipient,
-        amount: paymentData.amount,
-        timestamp: Date.now(),
-        memo: paymentData.merchant || paymentData.description || '',
-        status: 'success',
-        network: 'Sepolia testnet'
-      });
+      try {
+        // 決済履歴を保存
+        const savedPayment = PaymentHistoryStorage.savePayment({
+          transactionHash: hash,
+          to: paymentData.recipient,
+          amount: paymentData.amount,
+          timestamp: Date.now(),
+          memo: paymentData.merchant ? 
+            `${paymentData.merchant}${paymentData.merchantId ? ` (ID: ${paymentData.merchantId})` : ''}` :
+            paymentData.description || '',
+          status: 'success',
+          network: 'Sepolia testnet'
+        });
+        
+        console.log('決済履歴を保存しました:', savedPayment.id);
+      } catch (error) {
+        console.error('決済履歴の保存でエラーが発生しました:', error);
+        // 履歴保存の失敗は決済成功には影響しない
+      }
       
       onSuccess(hash);
     }
@@ -187,13 +294,62 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
             決済データを読み取れません
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            QRコードの形式が正しくありません
+            QRコードの形式が正しくないか、アドレスが無効です
           </p>
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <p className="text-xs font-mono text-gray-700 break-all">
               {scannedData}
             </p>
           </div>
+          
+          {/* デバッグ情報 */}
+          <div className="bg-blue-50 rounded-lg p-3 mb-4 text-left">
+            <p className="text-xs font-semibold text-blue-800 mb-2">🔍 デバッグ情報:</p>
+            <div className="space-y-1 text-xs text-blue-700">
+              <p>• データ長: {scannedData.length} 文字</p>
+              <p>• JSON形式: {(() => {
+                try { 
+                  JSON.parse(scannedData); 
+                  return '✅ 有効'; 
+                } catch { 
+                  return '❌ 無効'; 
+                }
+              })()}</p>
+              <p>• 受信者アドレス: {(() => {
+                try {
+                  const parsed = JSON.parse(scannedData);
+                  if (parsed.to) {
+                    if (parsed.to === '0x...' || parsed.to.length < 42) {
+                      return `❌ 不完全 (${parsed.to})`;
+                    }
+                    return isAddress(parsed.to) ? '✅ 有効' : '❌ 形式無効';
+                  }
+                  return '❓ アドレス未検出';
+                } catch {
+                  return '❓ JSON解析失敗';
+                }
+              })()}</p>
+              <p>• 店舗情報: {(() => {
+                try {
+                  const parsed = JSON.parse(scannedData);
+                  return parsed.merchant?.name ? `✅ ${parsed.merchant.name}` : '❌ なし';
+                } catch {
+                  return '❓ 解析失敗';
+                }
+              })()}</p>
+            </div>
+          </div>
+          
+          {/* 解決方法の提案 */}
+          <div className="bg-yellow-50 rounded-lg p-3 mb-4 text-left">
+            <p className="text-xs font-semibold text-yellow-800 mb-2">💡 解決方法:</p>
+            <div className="space-y-1 text-xs text-yellow-700">
+              <p>1. 支払いプログラム側で実際の受信者アドレスを設定</p>
+              <p>2. QRコードを再生成して再度スキャン</p>
+              <p>3. または手動入力でテスト用アドレスを使用</p>
+            </div>
+          </div>
+          
           <button
             onClick={onBack}
             className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -252,6 +408,12 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
               <div>
                 <p className="text-sm text-gray-500">店舗名</p>
                 <p className="font-medium text-gray-900">{paymentData.merchant}</p>
+                {paymentData.merchantId && (
+                  <p className="text-xs text-gray-500 font-mono">ID: {paymentData.merchantId}</p>
+                )}
+                {paymentData.merchantDescription && (
+                  <p className="text-sm text-gray-600 mt-1">{paymentData.merchantDescription}</p>
+                )}
               </div>
             </div>
           )}
@@ -266,7 +428,7 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
             </div>
           </div>
 
-          {paymentData.description && (
+          {paymentData.description && !paymentData.merchant && (
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-gray-600 mt-1" />
               <div>

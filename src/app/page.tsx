@@ -11,6 +11,7 @@ import { JPYCBalanceChecker } from '@/components/JPYCBalanceChecker';
 import { JPYCTestHelper } from '@/components/JPYCTestHelper';
 import { PaymentScreen } from '@/components/PaymentScreen';
 import { PaymentSuccess } from '@/components/PaymentSuccess';
+import { WalletConnector } from '@/components/WalletConnector';
 import PaymentHistoryScreen from '@/components/PaymentHistoryScreen';
 
 // タブコンポーネント（render外で定義）
@@ -96,10 +97,14 @@ export default function Home() {
           className="mb-6"
         >
           <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-200">
-            <div className="text-center">
-              <Wallet className="h-8 w-8 mx-auto mb-3 text-blue-600" />
-              <ConnectButton />
-            </div>
+            {!isConnected ? (
+              <WalletConnector />
+            ) : (
+              <div className="text-center">
+                <Wallet className="h-8 w-8 mx-auto mb-3 text-blue-600" />
+                <ConnectButton />
+              </div>
+            )}
           </div>
         </motion.div>
 

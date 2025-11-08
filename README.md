@@ -147,7 +147,16 @@ npm install
 
 ### 3. 環境変数の設定
 
-`.env.local` ファイルを作成し、以下を設定：
+テンプレートファイルをコピーして環境変数ファイルを作成：
+
+```bash
+# テンプレートファイルをコピー
+cp .env.example .env.local
+```
+
+その後、`.env.local` ファイルを編集して実際の値を設定してください。
+
+**必要な環境変数：**
 
 ```bash
 # ウォレット接続用のWalletConnect Project ID
@@ -166,6 +175,8 @@ NEXT_PUBLIC_CHAIN_ID=11155111
 NEXT_PUBLIC_APP_NAME=JPYC Payment Scanner
 NEXT_PUBLIC_APP_DESCRIPTION=顧客側決済スキャナーアプリ
 ```
+
+📋 **詳細な設定手順とトラブルシューティング**: `.env.example` ファイルを参照してください。
 
 ### 4. 開発サーバーの起動
 

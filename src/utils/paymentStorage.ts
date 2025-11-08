@@ -2,6 +2,20 @@ import { PaymentHistory, PaymentFilter } from '@/types/payment';
 
 const STORAGE_KEY = 'jpyc-payment-history';
 
+// ブラウザ環境とストレージの利用可能性をチェック
+const isStorageAvailable = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    const test = 'storage-test';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export class PaymentHistoryStorage {
   // 決済履歴を保存
   static savePayment(payment: Omit<PaymentHistory, 'id'>): PaymentHistory {
@@ -11,20 +25,45 @@ export class PaymentHistoryStorage {
       id
     };
     
-    const history = this.getHistory();
-    history.unshift(paymentWithId); // 新しいものを先頭に追加
-    
-    // 最大1000件まで保存（古いものを削除）
-    if (history.length > 1000) {
-      history.splice(1000);
+    if (!isStorageAvailable()) {
+      console.warn('ローカルストレージが利用できません。履歴は保存されません。');
+      return paymentWithId;
     }
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    return paymentWithId;
+    try {
+      const history = this.getHistory();
+      history.unshift(paymentWithId); // 新しいものを先頭に追加
+      
+      // 最大1000件まで保存（古いものを削除）
+      if (history.length > 1000) {
+        history.splice(1000);
+      }
+      
+      // localStorageの容量制限を考慮
+      const dataToStore = JSON.stringify(history);
+      if (dataToStore.length > 5 * 1024 * 1024) { // 5MBの制限
+        console.warn('決済履歴のデータサイズが大きすぎます。古いデータを削除します。');
+        history.splice(500); // 半分に削減
+      }
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      console.log('決済履歴を保存しました:', paymentWithId.id);
+      
+      return paymentWithId;
+    } catch (error) {
+      console.error('決済履歴の保存に失敗しました:', error);
+      // 保存に失敗してもpaymentWithIdは返す（アプリの動作を継続）
+      return paymentWithId;
+    }
   }
 
   // 全ての決済履歴を取得
   static getHistory(): PaymentHistory[] {
+    if (!isStorageAvailable()) {
+      console.warn('ローカルストレージが利用できません');
+      return [];
+    }
+    
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
