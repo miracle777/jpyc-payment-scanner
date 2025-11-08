@@ -25,6 +25,19 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Turbopack開発ツール（Nボタン）を非表示 */
+[data-nextjs-turbopack-sidebar],
+[data-nextjs-turbopack-toast],
+#__next-build-watcher,
+[data-nextjs-toast],
+.nextjs-portal button[aria-label*="Inspector"],
+.__next-dev-overlay-wrapper {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* WalletConnect Modal Fixes */
 wcm-modal,
 w3m-modal,
