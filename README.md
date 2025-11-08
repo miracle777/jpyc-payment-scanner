@@ -520,10 +520,20 @@ MetaMaskで以下の設定を行ってください：
 決済実行には少量のSepolia ETH（ガス代）が必要です：
 
 **Sepolia ETH Faucet**:
+
+**📋 通常のFaucet（簡単・制限あり）**:
 - **Chainlink Faucet**: https://faucets.chain.link/sepolia
 - **Alchemy Faucet**: https://sepoliafaucet.com/
 - **QuickNode Faucet**: https://faucet.quicknode.com/ethereum/sepolia
 - **Paradigm Faucet**: https://faucet.paradigm.xyz/
+
+**⛏️ マイニング型Faucet（おすすめ・制限なし）**:
+- **pk910.de Sepolia PoW Faucet**: https://sepolia-faucet.pk910.de/
+  - ✅ **メリット**: 残高制限なし（0.001ETH保有でも利用可能）
+  - ⚡ **仕組み**: PCでマイニング（Proof of Work）してETHを取得
+  - 🔄 **利用制限**: 24時間制限なし（マイニング時間に応じて取得量増加）
+  - ⚠️ **注意点**: PCのCPUを使用するため、自己責任でご利用ください
+  - 💡 **推奨**: 他のFaucetで制限に引っかかった場合の代替手段として最適
 
 ### 🪙 JPYCトークン設定
 
@@ -614,6 +624,7 @@ MetaMaskで以下の設定を行ってください：
 **2. ガス不足エラー**
 - **症状**: 決済時に「insufficient funds」エラー
 - **解決**: Sepolia ETHをFaucetから取得
+- **おすすめ**: 制限なしのマイニング型Faucet（https://sepolia-faucet.pk910.de/）を利用
 
 **3. トークンが表示されない**
 - **症状**: JPYC残高が0またはトークンが見えない
@@ -622,6 +633,7 @@ MetaMaskで以下の設定を行ってください：
 **4. Faucetが動作しない**
 - **症状**: Faucetから受け取れない
 - **解決**: 24時間以内に受け取り済みかレート制限を確認
+- **代替手段**: マイニング型Faucet（https://sepolia-faucet.pk910.de/）は時間制限なし
 
 **5. 決済が完了しない**
 - **症状**: MetaMaskで承認後も決済が進まない

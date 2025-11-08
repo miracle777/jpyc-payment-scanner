@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useReadContract, useAccount } from 'wagmi';
+import { useReadContract, useAccount, useBalance } from 'wagmi';
 import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { Search, AlertCircle, CheckCircle } from 'lucide-react';
-import { isAddress, getAddress } from 'viem';
+import { isAddress, getAddress, formatEther } from 'viem';
 
 export function JPYCBalanceChecker() {
   const { address: connectedAddress } = useAccount();
@@ -59,6 +59,18 @@ export function JPYCBalanceChecker() {
     functionName: 'decimals',
   });
 
+  // ETH残高取得
+  const {
+    data: ethBalance,
+    isError: ethBalanceError,
+    isLoading: ethBalanceLoading,
+  } = useBalance({
+    address: checkAddress ? checkAddress as `0x${string}` : undefined,
+    query: {
+      enabled: !!checkAddress && isAddress(checkAddress),
+    },
+  });
+
   const handleCheck = () => {
     if (inputAddress && isAddress(inputAddress)) {
       // アドレスを正しいチェックサム形式に変換
@@ -85,7 +97,7 @@ export function JPYCBalanceChecker() {
     ? formatJPYCDisplay(communityBalanceValue, communityDecimalsValue)
     : '0';
 
-  const isLoading = officialBalanceLoading || communityBalanceLoading;
+  const isLoading = officialBalanceLoading || communityBalanceLoading || ethBalanceLoading;
   const hasError = officialBalanceError || communityBalanceError;
 
   return (
@@ -109,13 +121,13 @@ export function JPYCBalanceChecker() {
           <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded p-2">
             <div className="text-xs text-blue-700">
               <span className="font-medium">接続中:</span>
-              <div className="font-mono mt-1">
-                {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
+              <div className="font-mono mt-1 break-all">
+                {connectedAddress.slice(0, 8)}...{connectedAddress.slice(-8)}
               </div>
             </div>
             <button
               onClick={() => setInputAddress(connectedAddress)}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex-shrink-0"
             >
               使用
             </button>
@@ -155,8 +167,44 @@ export function JPYCBalanceChecker() {
           <div className="text-sm text-gray-600">
             <strong>確認アドレス:</strong>
           </div>
-          <div className="text-xs font-mono bg-white p-2 rounded border break-all">
+          <div className="text-xs font-mono bg-white p-2 rounded border break-all overflow-hidden">
             {checkAddress}
+          </div>
+
+          {/* ETH残高 */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+            <div className="flex items-center gap-2 text-yellow-700 mb-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">⚡ ETH 残高（ガス代）</span>
+            </div>
+            {ethBalanceError ? (
+              <div className="text-red-600 text-sm">
+                <AlertCircle className="h-4 w-4 inline mr-1" />
+                取得エラー
+              </div>
+            ) : (
+              <>
+                <p className="text-xl font-bold text-yellow-900">
+                  {ethBalance ? parseFloat(formatEther(ethBalance.value)).toFixed(6) : '0'} ETH
+                </p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  決済時のガス代として使用されます
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    ethBalance && parseFloat(formatEther(ethBalance.value)) > 0.001 
+                      ? 'bg-green-500' 
+                      : 'bg-red-500'
+                  }`}></div>
+                  <span className="text-xs text-yellow-600">
+                    {ethBalance && parseFloat(formatEther(ethBalance.value)) > 0.001 
+                      ? '残高十分（決済可能）' 
+                      : '残高不足（Faucetから取得推奨）'
+                    }
+                  </span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 公式JPYC残高 */}
@@ -243,8 +291,8 @@ export function JPYCBalanceChecker() {
             className="w-full text-left text-xs bg-blue-50 border border-blue-200 rounded p-2 hover:bg-blue-100 transition-colors"
           >
             <span className="text-blue-600 font-medium">接続中のウォレットアドレスを使用</span>
-            <div className="text-gray-600 font-mono mt-1">
-              {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
+            <div className="text-gray-600 font-mono mt-1 break-all">
+              {connectedAddress.slice(0, 8)}...{connectedAddress.slice(-8)}
             </div>
           </button>
         </div>
@@ -254,8 +302,9 @@ export function JPYCBalanceChecker() {
       <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
         <p className="text-xs font-medium text-blue-800 mb-1">🔍 複数コントラクト対応:</p>
         <div className="space-y-1 text-xs text-blue-700">
-          <p>• 🏛️ 公式JPYC: {JPYC_CONFIG.address.slice(0, 8)}...{JPYC_CONFIG.address.slice(-6)}</p>
-          <p>• 🌍 コミュニティJPYC: {JPYC_COMMUNITY_CONFIG.address.slice(0, 8)}...{JPYC_COMMUNITY_CONFIG.address.slice(-6)}</p>
+          <p className="break-all">• 🏛️ 公式JPYC: {JPYC_CONFIG.address.slice(0, 10)}...{JPYC_CONFIG.address.slice(-10)}</p>
+          <p className="break-all">• 🌍 コミュニティJPYC: {JPYC_COMMUNITY_CONFIG.address.slice(0, 10)}...{JPYC_COMMUNITY_CONFIG.address.slice(-10)}</p>
+          <p>• ⚡ ETH残高も同時に表示（ガス代確認用）</p>
           <p>• 各コントラクトの残高を個別に表示</p>
           <p>• 合計残高も自動計算して表示</p>
         </div>

@@ -125,7 +125,7 @@ export default function Home() {
               <div>
                 <label className="text-xs font-medium text-gray-500 block">アドレス</label>
                 <p className="text-sm font-mono text-gray-800 break-all">
-                  {`${address.slice(0, 8)}...${address.slice(-6)}`}
+                  {`${address.slice(0, 10)}...${address.slice(-10)}`}
                 </p>
               </div>
               
@@ -228,7 +228,7 @@ export default function Home() {
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm font-medium text-gray-500 block mb-1">完全なアドレス</label>
-                        <div className="text-xs font-mono text-gray-600 bg-gray-50 rounded p-2 break-all">
+                        <div className="text-xs font-mono text-gray-600 bg-gray-50 rounded p-2 break-all overflow-hidden">
                           {address}
                         </div>
                       </div>

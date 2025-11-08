@@ -1,9 +1,10 @@
 'use client';
 
-import { useAccount, useReadContract } from 'wagmi';
+import { useAccount, useReadContract, useBalance } from 'wagmi';
 import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { Coins, AlertCircle, RefreshCw, Info, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { formatEther } from 'viem';
 
 interface JPYCBalanceProps {
   selectedContract?: 'official' | 'community';
@@ -107,6 +108,19 @@ export function JPYCBalance({ selectedContract: externalSelectedContract, onCont
     },
   });
 
+  // ETH残高取得
+  const {
+    data: ethBalance,
+    isLoading: ethBalanceLoading,
+    refetch: ethRefetch,
+  } = useBalance({
+    address: address,
+    query: {
+      enabled: !!address && isConnected,
+      refetchInterval: 30000,
+    },
+  });
+
   // デバッグ用のコンソールログ
   useEffect(() => {
     const debugInfo = {
@@ -138,7 +152,7 @@ export function JPYCBalance({ selectedContract: externalSelectedContract, onCont
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([officialRefetch(), communityRefetch()]);
+      await Promise.all([officialRefetch(), communityRefetch(), ethRefetch()]);
     } finally {
       setTimeout(() => setIsRefreshing(false), 1000);
     }
@@ -282,6 +296,35 @@ export function JPYCBalance({ selectedContract: externalSelectedContract, onCont
             <p className="text-xs text-blue-600 mt-1">
               {isOfficialContract ? '🏛️ 公式コントラクト' : '🌍 コミュニティコントラクト'} • Sepolia testnet • 30秒ごと自動更新
             </p>
+            
+            {/* ETH残高表示 */}
+            <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-yellow-800">⚡ ETH残高（ガス代）:</span>
+                {ethBalanceLoading ? (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b border-yellow-600"></div>
+                ) : (
+                  <span className="text-xs font-bold text-yellow-900">
+                    {ethBalance ? parseFloat(formatEther(ethBalance.value)).toFixed(6) : '0.000000'} ETH
+                  </span>
+                )}
+              </div>
+              {ethBalance && (
+                <div className="flex items-center gap-2 mt-1">
+                  <div className={`w-2 h-2 rounded-full ${
+                    parseFloat(formatEther(ethBalance.value)) > 0.001 
+                      ? 'bg-green-500' 
+                      : 'bg-red-500'
+                  }`}></div>
+                  <span className="text-xs text-yellow-700">
+                    {parseFloat(formatEther(ethBalance.value)) > 0.001 
+                      ? '残高十分（決済可能）' 
+                      : '残高不足（Faucetから取得推奨）'
+                    }
+                  </span>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
