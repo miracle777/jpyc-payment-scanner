@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import HideTurbopack from "@/components/HideTurbopack";
 import { GlobalErrorHandler } from "@/components/GlobalErrorHandler";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,11 +22,19 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "JPYC Scanner",
+    startupImage: "/icons/icon-512x512.png",
   },
   formatDetection: {
     telephone: false,
+  },
+  icons: {
+    apple: [
+      { url: "/icons/icon-180x180.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/icon-152x152.png", sizes: "152x152", type: "image/png" },
+      { url: "/icons/icon-144x144.png", sizes: "144x144", type: "image/png" },
+    ],
   },
   other: {
     "mobile-web-app-capable": "yes",
@@ -36,6 +45,7 @@ export const metadata: Metadata = {
     "msapplication-navbutton-color": "#1f2937",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
     "msapplication-starturl": "/",
+    "apple-mobile-web-app-orientations": "portrait",
   },
 };
 
@@ -65,6 +75,7 @@ export default function RootLayout({
         <Providers>
           {children}
           <HideTurbopack />
+          <PWAInstallPrompt />
         </Providers>
       </body>
     </html>

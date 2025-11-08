@@ -11,6 +11,31 @@
   "lang": "ja",
   "categories": ["finance", "business", "productivity"],
   "permissions": ["camera"],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "QRスキャン",
+      "short_name": "スキャン",
+      "description": "QRコードをスキャンして決済",
+      "url": "/?shortcut=scan",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ウォレット",
+      "short_name": "ウォレット",
+      "description": "ウォレット情報と残高確認",
+      "url": "/?shortcut=wallet",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "履歴",
+      "short_name": "履歴",
+      "description": "決済履歴の確認",
+      "url": "/?shortcut=history",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -59,6 +84,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "apple touch icon"
     }
   ],
   "screenshots": [
@@ -66,13 +97,15 @@
       "src": "/screenshots/desktop.png",
       "sizes": "1920x1080",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Desktop view of JPYC Payment Scanner"
     },
     {
       "src": "/screenshots/mobile.png",
       "sizes": "375x667",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Mobile view of JPYC Payment Scanner"
     }
   ],
   "features": [
@@ -80,5 +113,11 @@
     "ウォレット接続",
     "JPYC決済",
     "決済履歴"
-  ]
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
 }
