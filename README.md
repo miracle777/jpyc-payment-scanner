@@ -438,7 +438,7 @@ MetaMaskで以下の設定を行ってください：
 
 **取得方法**:
 - **公式Faucet**: https://faucet.jpyc.jp/
-- **配布量**: 最大2,500 JPYC
+
 
 #### 🌍 コミュニティJPYC
 
@@ -663,25 +663,6 @@ This project is licensed under the MIT License.
 - 作者は使用による損失について責任を負いません
 - 自己責任でご利用ください
 
-## 🤝 コントリビューション
-
-このプロジェクトへの貢献を歓迎します！
-
-**貢献方法**:
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add some amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
-
-**貢献できる分野**:
-- 🐛 バグ修正
-- ✨ 新機能追加
-- 📚 ドキュメント改善
-- 🎨 UI/UX改善
-- 🔒 セキュリティ強化
-- 🌐 多言語対応
-- 📱 モバイル最適化
 
 ## 🙏 謝辞
 
