@@ -300,12 +300,12 @@ export function JPYCBalance({ selectedContract: externalSelectedContract, onCont
             {/* ETH残高表示 */}
             <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-yellow-800">⚡ ETH残高（ガス代）:</span>
+                <span className="text-xs font-medium text-yellow-800">⚡ SepoliaETH残高（ガス代）:</span>
                 {ethBalanceLoading ? (
                   <div className="animate-spin rounded-full h-3 w-3 border-b border-yellow-600"></div>
                 ) : (
                   <span className="text-xs font-bold text-yellow-900">
-                    {ethBalance ? parseFloat(formatEther(ethBalance.value)).toFixed(6) : '0.000000'} ETH
+                    {ethBalance ? parseFloat(formatEther(ethBalance.value)).toFixed(6) : '0.000000'} SepoliaETH
                   </span>
                 )}
               </div>
@@ -369,14 +369,17 @@ export function JPYCBalance({ selectedContract: externalSelectedContract, onCont
           <p className="text-xs font-medium text-blue-800 mb-2">🔍 デバッグ情報:</p>
           <div className="space-y-1 text-xs font-mono">
             <div className="bg-blue-100 p-2 rounded">
-              <p className="text-blue-800"><strong>ウォレット:</strong> {address}</p>
+              <p className="text-blue-800"><strong>ウォレット:</strong></p>
+              <p className="text-blue-800 break-all mt-1">{address}</p>
             </div>
             <div className="bg-blue-100 p-2 rounded">
-              <p className="text-blue-800"><strong>公式コントラクト:</strong> {JPYC_CONFIG.address}</p>
+              <p className="text-blue-800"><strong>公式コントラクト:</strong></p>
+              <p className="text-blue-800 break-all mt-1">{JPYC_CONFIG.address}</p>
               <p className="text-blue-800"><strong>公式残高:</strong> {officialBalanceValue?.toString() || 'null'}</p>
             </div>
             <div className="bg-green-100 p-2 rounded">
-              <p className="text-green-800"><strong>コミュニティコントラクト:</strong> {JPYC_COMMUNITY_CONFIG.address}</p>
+              <p className="text-green-800"><strong>コミュニティコントラクト:</strong></p>
+              <p className="text-green-800 break-all mt-1">{JPYC_COMMUNITY_CONFIG.address}</p>
               <p className="text-green-800"><strong>コミュニティ残高:</strong> {communityBalanceValue?.toString() || 'null'}</p>
             </div>
             <div className="bg-blue-100 p-2 rounded">

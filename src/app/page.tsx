@@ -136,9 +136,9 @@ export default function Home() {
                 </div>
                 {balance && (
                   <div className="text-right">
-                    <label className="text-xs font-medium text-gray-500 block">ETH残高</label>
+                    <label className="text-xs font-medium text-gray-500 block">SepoliaETH残高</label>
                     <p className="text-sm text-gray-800">
-                      {parseFloat(balance.formatted).toFixed(4)} ETH
+                      {parseFloat(balance.formatted).toFixed(4)} SepoliaETH
                     </p>
                   </div>
                 )}
