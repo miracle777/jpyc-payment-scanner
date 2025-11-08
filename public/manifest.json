@@ -10,6 +10,7 @@
   "scope": "/",
   "lang": "ja",
   "categories": ["finance", "business", "productivity"],
+  "permissions": ["camera"],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",

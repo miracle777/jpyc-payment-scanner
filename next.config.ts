@@ -8,8 +8,28 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@rainbow-me/rainbowkit', 'wagmi', 'viem'],
   },
   
-  // クロスオリジン設定（スマホアクセス用）
-  allowedDevOrigins: ['172.20.10.11'],
+  // HTTPS対応とスマホアクセス用設定
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(self), microphone=(self), geolocation=(self)',
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+        ],
+      },
+    ];
+  },
   
   // コンパイラー設定
   compiler: {

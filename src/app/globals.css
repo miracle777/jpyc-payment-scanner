@@ -25,17 +25,40 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Turbopack開発ツール（Nボタン）を非表示 */
+/* Turbopack開発ツール（Nボタン）を完全に非表示 - 強制適用 */
 [data-nextjs-turbopack-sidebar],
 [data-nextjs-turbopack-toast],
 #__next-build-watcher,
 [data-nextjs-toast],
 .nextjs-portal button[aria-label*="Inspector"],
-.__next-dev-overlay-wrapper {
+.__next-dev-overlay-wrapper,
+/* 追加のTurbopackセレクター */
+button[aria-label*="turbo"],
+button[aria-label*="Turbo"],
+[data-turbopack],
+[data-testid*="turbo"],
+/* Next.js 16特有のセレクター */
+button[data-nextjs-inspector],
+div[data-nextjs-inspector],
+[class*="turbopack"],
+[class*="Turbopack"],
+/* より具体的なセレクター */
+button[style*="position: fixed"][style*="bottom"],
+/* 最終手段 - 位置による指定 */
+body > div:last-child button[style*="position: fixed"],
+body > * button[style*="position: fixed"][style*="bottom: 20px"],
+body > * button[style*="position: fixed"][style*="left: 20px"] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
   pointer-events: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  z-index: -9999 !important;
 }
 
 /* WalletConnect Modal Fixes */

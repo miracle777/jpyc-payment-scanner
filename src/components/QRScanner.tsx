@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import QrScanner from 'qr-scanner';
 import { Camera, CameraOff, QrCode, AlertCircle } from 'lucide-react';
@@ -10,17 +10,20 @@ export function QRScanner() {
   const [scannedData, setScannedData] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<string>('unknown');
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
-  useEffect(() => {
-    checkCameraAvailability();
-    return () => {
-      stopScanning();
-    };
+  const stopScanning = useCallback(() => {
+    if (scannerRef.current) {
+      scannerRef.current.stop();
+      scannerRef.current.destroy();
+      scannerRef.current = null;
+    }
+    setIsScanning(false);
   }, []);
 
-  const checkCameraAvailability = async () => {
+  const checkCameraAvailability = useCallback(async () => {
     try {
       const hasCamera = await QrScanner.hasCamera();
       setHasCamera(hasCamera);
@@ -28,10 +31,84 @@ export function QRScanner() {
         setError('カメラが利用できません');
       }
     } catch (err) {
+      console.error('Camera availability check failed:', err);
       setHasCamera(false);
       setError('カメラの確認中にエラーが発生しました');
     }
-  };
+  }, []);
+
+  const checkCameraPermissionAndAvailability = useCallback(async () => {
+    try {
+      // まず権限を確認
+      if ('permissions' in navigator) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          setPermissionStatus(permission.state);
+          
+          permission.onchange = () => {
+            setPermissionStatus(permission.state);
+          };
+        } catch (permErr) {
+          console.log('Permissions API not supported:', permErr);
+        }
+      }
+
+      // カメラの利用可能性を確認
+      await checkCameraAvailability();
+    } catch (err) {
+      console.error('Camera check error:', err);
+      setHasCamera(false);
+      setError('カメラの確認中にエラーが発生しました');
+    }
+  }, [checkCameraAvailability]);
+
+  const requestCameraPermission = useCallback(async () => {
+    try {
+      setError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      });
+      
+      // 権限が取得できたらストリームを停止
+      stream.getTracks().forEach(track => track.stop());
+      
+      // 権限状態を更新
+      setPermissionStatus('granted');
+      await checkCameraAvailability();
+    } catch (err) {
+      console.error('Permission request failed:', err);
+      const error = err as Error & { name?: string };
+      if (error.name === 'NotAllowedError') {
+        setError('カメラへのアクセスが拒否されました。ブラウザの設定でカメラの使用を許可してください。');
+        setPermissionStatus('denied');
+      } else if (error.name === 'NotFoundError') {
+        setError('カメラが見つかりません。デバイスにカメラが接続されているか確認してください。');
+      } else {
+        setError('カメラへのアクセスに失敗しました: ' + error.message);
+      }
+    }
+  }, [checkCameraAvailability]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const initCamera = async () => {
+      if (mounted) {
+        await checkCameraPermissionAndAvailability();
+      }
+    };
+    
+    initCamera();
+    
+    return () => {
+      mounted = false;
+      stopScanning();
+    };
+  }, [checkCameraPermissionAndAvailability, stopScanning]);
 
   const startScanning = async () => {
     if (!videoRef.current || !hasCamera) return;
@@ -40,9 +117,11 @@ export function QRScanner() {
       setError(null);
       setScannedData(null);
 
+      // QrScannerの初期化
       scannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
+          console.log('QR Code detected:', result.data);
           setScannedData(result.data);
           setIsScanning(false);
           scannerRef.current?.stop();
@@ -51,24 +130,30 @@ export function QRScanner() {
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',
+          maxScansPerSecond: 5,
+          calculateScanRegion: () => ({
+            x: 0.1,
+            y: 0.1, 
+            width: 0.8,
+            height: 0.8
+          })
         }
       );
 
       await scannerRef.current.start();
       setIsScanning(true);
     } catch (err) {
-      setError('カメラの起動に失敗しました');
+      console.error('Scanner start failed:', err);
+      const error = err as Error & { name?: string };
+      if (error.name === 'NotAllowedError') {
+        setError('カメラへのアクセスが拒否されました。ブラウザの設定でカメラの使用を許可してください。');
+      } else if (error.name === 'NotFoundError') {
+        setError('カメラが見つかりません');
+      } else {
+        setError('カメラの起動に失敗しました: ' + (error.message || error));
+      }
       setIsScanning(false);
     }
-  };
-
-  const stopScanning = () => {
-    if (scannerRef.current) {
-      scannerRef.current.stop();
-      scannerRef.current.destroy();
-      scannerRef.current = null;
-    }
-    setIsScanning(false);
   };
 
   const resetScanner = () => {
@@ -106,9 +191,17 @@ export function QRScanner() {
           <p className="text-gray-600 dark:text-gray-400 mb-2">
             カメラが利用できません
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500">
+          <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
             デバイスにカメラが接続されているか確認してください
           </p>
+          {permissionStatus === 'denied' && (
+            <button
+              onClick={requestCameraPermission}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              カメラ権限を再要求
+            </button>
+          )}
         </div>
       ) : (
         <>
@@ -118,6 +211,9 @@ export function QRScanner() {
               ref={videoRef}
               className={`w-full rounded-lg ${isScanning ? 'block' : 'hidden'}`}
               style={{ aspectRatio: '4/3' }}
+              autoPlay
+              muted
+              playsInline
             />
             
             {!isScanning && !scannedData && (
@@ -134,6 +230,9 @@ export function QRScanner() {
             {isScanning && (
               <div className="absolute inset-0 border-2 border-blue-600 rounded-lg pointer-events-none">
                 <div className="absolute inset-4 border border-white/50 rounded"></div>
+                <div className="absolute top-2 left-2 text-white text-sm bg-black/50 px-2 py-1 rounded">
+                  QRコードをフレーム内に合わせてください
+                </div>
               </div>
             )}
           </div>
@@ -145,6 +244,14 @@ export function QRScanner() {
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
               </div>
+              {permissionStatus === 'denied' && (
+                <button
+                  onClick={requestCameraPermission}
+                  className="mt-2 text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded transition-colors"
+                >
+                  カメラ権限を再要求
+                </button>
+              )}
             </div>
           )}
 
@@ -203,8 +310,9 @@ export function QRScanner() {
           )}
 
           {/* 使い方ガイド */}
-          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+          <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
             <p>QRコードをカメラに向けてスキャンしてください</p>
+            <p>💡 HTTPSでアクセスしている場合、カメラが利用できます</p>
           </div>
         </>
       )}
