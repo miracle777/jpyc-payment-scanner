@@ -187,10 +187,14 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
         const amountMatch = data.match(/amount=([0-9.]+)/);
         
         if (merchantMatch && amountMatch) {
-          const defaultAddress = '0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd';
-          const validatedAddress = validateAndFormatAddress(defaultAddress);
+          // 接続されたウォレットのアドレスを使用（固定アドレスを避ける）
+          if (!address) {
+            console.log('❌ ウォレットが接続されていません');
+            return null;
+          }
+          const validatedAddress = validateAndFormatAddress(address);
           if (!validatedAddress) {
-            console.log('❌ Invalid default address:', defaultAddress);
+            console.log('❌ Invalid connected wallet address:', address);
             return null;
           }
           return {
@@ -222,7 +226,7 @@ export function PaymentScreen({ scannedData, selectedContract, onBack, onSuccess
       console.error('❌ Parse error:', error);
       return null;
     }
-  }, []);
+  }, [address]);
 
   // 初期化時にQRデータを解析
   useEffect(() => {

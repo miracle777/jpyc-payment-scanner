@@ -15,8 +15,21 @@ const queryClient = new QueryClient({
             error?.message?.includes('user rejected')) {
           return false;
         }
+        // IndexedDBエラーの場合はリトライしない
+        if (error?.message?.includes('IndexedDB') || 
+            error?.name === 'InternalError') {
+          return false;
+        }
+        // WalletConnect暗号化エラーの場合はリトライしない
+        if (error?.message?.includes('aes/gcm') || 
+            error?.message?.includes('ghash') ||
+            error?.message?.includes('decrypt')) {
+          return false;
+        }
         return failureCount < 3;
       },
+      refetchOnWindowFocus: false, // WalletConnect接続時の不要な再取得を防ぐ
+      staleTime: 5 * 60 * 1000, // 5分間キャッシュを有効とする
     },
   },
 });

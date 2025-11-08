@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useAccount } from 'wagmi';
 import QrScanner from 'qr-scanner';
-import { Camera, CameraOff, AlertCircle, CheckCircle, Type, Smartphone } from 'lucide-react';
+import { Camera, CameraOff, AlertCircle, Type, Smartphone } from 'lucide-react';
 
 interface QRScannerComponentProps {
   onScanResult: (data: string) => void;
 }
 
 export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
+  const { address } = useAccount();
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
@@ -17,8 +19,11 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<QrScanner | null>(null);
 
-  const generateSampleData = () => {
-    const now = 1762568209578; // 固定タイムスタンプ
+  const generateSampleData = useCallback(() => {
+    const now = Date.now();
+    // 接続されたウォレットのアドレスを使用、未接続の場合はサンプル用の汎用アドレス
+    const sampleAddress = address || '0x1234567890123456789012345678901234567890';
+    
     return [
       JSON.stringify({
         type: 'JPYC_PAYMENT',
@@ -33,14 +38,14 @@ export function QRScannerComponent({ onScanResult }: QRScannerComponentProps) {
           id: 'JPYC_TEST123',
           description: 'サンプル店舗'
         },
-        to: '0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
+        to: sampleAddress,
         timestamp: now,
         expires: now + (5 * 60 * 1000)
       }),
-      'ethereum:0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd',
-      'jpyc:amount=50&to=0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd'
+      `ethereum:${sampleAddress}`,
+      `jpyc:amount=50&to=${sampleAddress}`
     ];
-  };
+  }, [address]);
 
   const stopScanning = () => {
     if (scannerRef.current) {

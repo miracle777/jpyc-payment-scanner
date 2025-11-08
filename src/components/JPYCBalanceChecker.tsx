@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useReadContract } from 'wagmi';
+import { useReadContract, useAccount } from 'wagmi';
 import { JPYC_CONFIG, JPYC_COMMUNITY_CONFIG, formatJPYCDisplay } from '@/contracts/jpyc';
 import { Search, AlertCircle, CheckCircle } from 'lucide-react';
 import { isAddress, getAddress } from 'viem';
 
 export function JPYCBalanceChecker() {
+  const { address: connectedAddress } = useAccount();
   const [inputAddress, setInputAddress] = useState('');
   const [checkAddress, setCheckAddress] = useState<string | null>(null);
 
@@ -99,9 +100,27 @@ export function JPYCBalanceChecker() {
           type="text"
           value={inputAddress}
           onChange={(e) => setInputAddress(e.target.value)}
-          placeholder="0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd"
+          placeholder={connectedAddress ? "接続中のアドレスまたは他のアドレスを入力" : "ウォレットアドレスを入力してください"}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
         />
+        
+        {/* 接続中のウォレットアドレスを使用するボタン */}
+        {connectedAddress && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded p-2">
+            <div className="text-xs text-blue-700">
+              <span className="font-medium">接続中:</span>
+              <div className="font-mono mt-1">
+                {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
+              </div>
+            </div>
+            <button
+              onClick={() => setInputAddress(connectedAddress)}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+            >
+              使用
+            </button>
+          </div>
+        )}
         
         <div className="flex gap-2">
           <button
@@ -216,27 +235,29 @@ export function JPYCBalanceChecker() {
         </div>
       )}
 
-      {/* Sample Addresses */}
-      <div className="pt-2 border-t border-gray-200">
-        <p className="text-xs font-medium text-gray-600 mb-2">サンプルアドレス:</p>
-        <div className="space-y-1">
+      {/* 接続中のウォレットアドレスの簡単入力 */}
+      {connectedAddress && (
+        <div className="pt-2 border-t border-gray-200">
           <button
-            onClick={() => setInputAddress('0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd')}
-            className="w-full text-left text-xs font-mono bg-white border border-gray-200 rounded p-2 hover:bg-gray-50 transition-colors"
+            onClick={() => setInputAddress(connectedAddress)}
+            className="w-full text-left text-xs bg-blue-50 border border-blue-200 rounded p-2 hover:bg-blue-100 transition-colors"
           >
-            0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd
+            <span className="text-blue-600 font-medium">接続中のウォレットアドレスを使用</span>
+            <div className="text-gray-600 font-mono mt-1">
+              {connectedAddress.slice(0, 6)}...{connectedAddress.slice(-4)}
+            </div>
           </button>
         </div>
+      )}
         
-        {/* 詳細デバッグ情報 */}
-        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
-          <p className="text-xs font-medium text-blue-800 mb-1">🔍 複数コントラクト対応:</p>
-          <div className="space-y-1 text-xs text-blue-700">
-            <p>• 🏛️ 公式JPYC: {JPYC_CONFIG.address.slice(0, 8)}...{JPYC_CONFIG.address.slice(-6)}</p>
-            <p>• 🌍 コミュニティJPYC: {JPYC_COMMUNITY_CONFIG.address.slice(0, 8)}...{JPYC_COMMUNITY_CONFIG.address.slice(-6)}</p>
-            <p>• 各コントラクトの残高を個別に表示</p>
-            <p>• 合計残高も自動計算して表示</p>
-          </div>
+      {/* 詳細デバッグ情報 */}
+      <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+        <p className="text-xs font-medium text-blue-800 mb-1">🔍 複数コントラクト対応:</p>
+        <div className="space-y-1 text-xs text-blue-700">
+          <p>• 🏛️ 公式JPYC: {JPYC_CONFIG.address.slice(0, 8)}...{JPYC_CONFIG.address.slice(-6)}</p>
+          <p>• 🌍 コミュニティJPYC: {JPYC_COMMUNITY_CONFIG.address.slice(0, 8)}...{JPYC_COMMUNITY_CONFIG.address.slice(-6)}</p>
+          <p>• 各コントラクトの残高を個別に表示</p>
+          <p>• 合計残高も自動計算して表示</p>
         </div>
       </div>
     </div>

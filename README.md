@@ -13,6 +13,11 @@
 
 このアプリは、QRコードを使用してJPYC（JPY Coin）の決済を簡単に行うことができるPWA（Progressive Web App）です。店舗での支払いや個人間送金に活用できる実用的なアプリケーションとして開発されました。
 
+### 📱 決済完了画面
+
+![決済完了画面](./public/payment-complete-screenshot.png)
+*実際の決済完了時に表示される画面 - 紙吹雪エフェクトで成功を美しく表現*
+
 ## 🔗 関連リポジトリ
 
 **🏪 店舗側決済アプリ**: [jpycwallet.dev](https://github.com/miracle777/jpycwallet.dev)
@@ -30,6 +35,28 @@
 - ✅ **残高チェック** - 決済前の残高確認
 - ✅ **MetaMask連携** - セキュアな送金実行
 - ✅ **成功アニメーション** - 美しい紙吹雪エフェクト
+
+### 🖼️ 決済画面プレビュー
+
+#### QRコードスキャン画面
+![QRスキャン画面](./public/qr-scanner-screenshot.png)
+*カメラによるリアルタイムQRコードスキャン画面*
+
+#### QRスキャン結果画面
+![QRスキャン結果画面](./public/qr-scan-result-screenshot.png)
+*QRコード読み取り後の決済情報表示画面*
+
+#### 決済承認画面
+![決済承認画面](./public/payment-confirmation-screenshot.png)
+*決済承認画面 - 送金先、金額、残高を詳細確認*
+
+#### 決済完了画面
+![決済完了画面](./public/payment-complete-screenshot.png)
+*決済完了時の美しい紙吹雪エフェクト*
+
+#### ウォレット詳細画面
+![ウォレット詳細画面](./public/wallet-details-screenshot.png)
+*ウォレット接続情報とETH・JPYC残高表示*
 
 #### 🔐 ウォレット機能
 - ✅ **RainbowKit + wagmi** - 最新のWeb3接続フレームワーク
@@ -328,12 +355,25 @@ http://172.20.10.11:3000  # ネットワークURL
 2. QRコードをカメラでスキャン
 3. または「サンプルデータを使用」でテスト
 
+![QRスキャン画面](./public/qr-scanner-screenshot.png)
+*リアルタイムカメラプレビューでQRコードをスキャン*
+
+![QRスキャン結果画面](./public/qr-scan-result-screenshot.png)
+*QRコード読み取り後の決済情報確認画面*
+
 #### 4. 決済実行
 1. 金額と送金先を確認
 2. JPYC残高をチェック
 3. 「決済実行」ボタンをクリック
+
+![決済承認画面](./public/payment-confirmation-screenshot.png)
+*決済承認画面 - 金額、送金先、残高を最終確認*
+
 4. MetaMaskで署名・承認
 5. ✅ 決済完了！
+
+![決済完了画面](./public/payment-complete-screenshot.png)
+*決済完了時のアニメーション画面（紙吹雪エフェクト付き）*
 
 ### 📊 履歴機能の活用
 
@@ -361,7 +401,7 @@ http://172.20.10.11:3000  # ネットワークURL
 
 #### 👥 個人間送金
 ```
-ethereum:0x5888578ad9a33Ce8a9FA3A0ca40816665bfaD8Fd
+ethereum:[送金先のウォレットアドレス]
 メモ「友人への食事代」として記録
 ```
 
