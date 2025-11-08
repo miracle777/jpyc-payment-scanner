@@ -55,8 +55,8 @@
 *決済完了時の美しい紙吹雪エフェクト*
 
 #### ウォレット詳細画面
-![ウォレット詳細画面](./public/wallet-details-screenshot.png)
-*ウォレット接続情報とETH・JPYC残高表示*
+![ウォレット詳細確認画面](./public/wallet-details-extended-screenshot.png)
+*ウォレット接続情報の詳細確認画面 - アドレス、ネットワーク、ETH・JPYC残高を包括的に表示*
 
 #### JPYC残高確認画面
 ![JPYC残高確認画面](./public/jpyc-balance-screenshot.png)
@@ -457,6 +457,9 @@ ethereum:[送金先のウォレットアドレス]
 3. **共有ボタン** (⎘) をタップ
 4. **「ホーム画面に追加」**を選択
 5. アプリ名を確認して**「追加」**をタップ
+
+![PWAインストール手順](./public/pwa-installation-steps-screenshot.png)
+*実際のiOS Safari でのPWAインストール手順画面*
 
 **✨ PWA体験**：
 - ✅ **ネイティブアプリ風起動** - スプラッシュ画面付き
